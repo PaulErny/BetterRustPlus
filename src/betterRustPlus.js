@@ -3,7 +3,7 @@ import { config } from 'dotenv'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url';
-import * as test from './commands/utility/test.js'
+import BM from "@leventhan/battlemetrics"
 
 config()
 
@@ -60,28 +60,30 @@ for (const file of eventFiles) {
 	}
 }
 
-// Event listener for when a slash command is executed
-// client.on(Events.MessageCreate, message => {
-// 	if (message.author.bot) return
 
-// 	console.log(message.content);
+// init battlemetrics API related stuff
 
-// 	if (message.content === 'Mieux que rust+ ?') {
-// 		message.channel.send("oui")
-// 	}
+const BMOptions = {
+	token: process.env.BATTLEMETRICS_TOKEN,
+	game: 'rust',
+	// serverID: '',
+}
 
-// 	if (message.content === 'reply') {
-// 		message.reply("oui")
-// 	}
+const battlemetrics = new BM(BMOptions)
 
-// 	if (message.content === '🔥') {
-// 		message.react('🔥')
-// 	}
-
-// 	if (message.content === 'ntm') {
-// 		message.channel.send("non toi")
-// 	}
-// });
+battlemetrics.getServerInfoByNameAndGame("[EU] HollowServers - 2x").then(res => {
+	console.log(res.map(server => {
+		return {
+			// id: server.id,
+			name: server.name,
+			ip: server.ip,
+			players: server.players,
+		}
+	}))
+	// console.log(res[0])
+}).catch(err => {
+	console.error(err)
+})
 
 // Log in to Discord with your client's token
 client.login(process.env.TOKEN);
