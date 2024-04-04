@@ -96,28 +96,32 @@ client.login(process.env.TOKEN);
 const PORT = 8080
 const app = express()
 
-const allowedOrigins = ['https://companion-rust.facepunch.com']
-
-app.use(cors({
-	origin: (origin, callback) => {
-		if (!origin) {
-			return callback(null, true)
-		}
-
-		if (!allowedOrigins.includes(origin)) {
-			const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      		return callback(new Error(msg), false);
-		}
-		return callback(null, true)
-	}
-
-}))
+const allowedOrigins = [
+	'https://companion-rust.facepunch.com',
+	'http://localhost:3000' //tmp
+]
+const corsOptions = {
+	origin: function (origin, callback) {
+	  	if (allowedOrigins.indexOf(origin) !== -1) {
+			callback(null, true)
+	  	} else {
+			console.log(origin)
+			console.log(allowedOrigins.indexOf(origin))
+			callback(new Error('Not allowed by CORS'))
+	  	}
+	},
+	allowedHeaders: ["Content-Type"]
+}
+app.use(cors(corsOptions))
+app.use(express.json())
 
 app.post('/register', (req, res) => {
 	// res.send('Welcome')
-	let steamID = req.query.steamID
-	let token = req.query.token
-	console.log(`steam ID= ${steamID}\nToken= ${token}`)
+	console.log(req)
+	let steamID = req.body.steamID
+	let rustToken = req.body.rustToken
+	let fcmToken = req.body.fcmToken
+	console.log(`steam ID= ${steamID}\nToken= ${rustToken}\nfcmToken= ${fcmToken}`)
 	res.sendStatus(200)
 })
 

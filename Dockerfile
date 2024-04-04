@@ -9,7 +9,7 @@ RUN apk update && apk add bash
 
 RUN npm install
 
-EXPOSE 3000
+# EXPOSE 8080
 
 # RUN ["node", "deploy-commands.js"]
 
