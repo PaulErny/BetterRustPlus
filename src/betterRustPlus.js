@@ -144,8 +144,11 @@ app.post('/register', (req, res) => {
 			return registerWithRustPlus(rustToken, expoToken)
 		}).then((rustAPIres) => {
 			res.status(rustAPIres.status).send(rustAPIres.statusText)
+		}).catch((err) => {
+			console.error(err)
+			console.error(err.response)
+			res.status(err.response.status).send(err.response.statusText)
 		})
-	res.sendStatus(200)
 })
 
 app.listen(PORT, () => {
