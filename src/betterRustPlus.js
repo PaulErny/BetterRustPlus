@@ -7,6 +7,8 @@ import BM from "@leventhan/battlemetrics"
 import express from 'express'
 import bodyParser from 'body-parser'
 import cors from 'cors'
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid'
 
 config()
 
@@ -55,7 +57,6 @@ const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'
 for (const file of eventFiles) {
 	const filePath = path.join(eventsPath, file);
 	const event = await import(filePath);
-	console.log(filePath)
 	if (event.once) {
 		client.once(event.name, (...args) => event.execute(...args));
 	} else {
@@ -63,33 +64,32 @@ for (const file of eventFiles) {
 	}
 }
 
+// Log in to Discord with your client's token
+client.login(process.env.TOKEN);
 
 // init battlemetrics API related stuff
 
-const BMOptions = {
-	token: process.env.BATTLEMETRICS_TOKEN,
-	game: 'rust',
-	// serverID: '',
-}
+// const BMOptions = {
+// 	token: process.env.BATTLEMETRICS_TOKEN,
+// 	game: 'rust',
+// 	// serverID: '',
+// }
 
-const battlemetrics = new BM(BMOptions)
+// const battlemetrics = new BM(BMOptions)
 
-battlemetrics.getServerInfoByNameAndGame("[EU] HollowServers - 2x").then(res => {
-	console.log(res.map(server => {
-		return {
-			// id: server.id,
-			name: server.name,
-			ip: server.ip,
-			players: server.players,
-		}
-	}))
-	// console.log(res[0])
-}).catch(err => {
-	console.error(err)
-})
-
-// Log in to Discord with your client's token
-client.login(process.env.TOKEN);
+// battlemetrics.getServerInfoByNameAndGame("[EU] HollowServers - 2x").then(res => {
+// 	console.log(res.map(server => {
+// 		return {
+// 			// id: server.id,
+// 			name: server.name,
+// 			ip: server.ip,
+// 			players: server.players,
+// 		}
+// 	}))
+// 	// console.log(res[0])
+// }).catch(err => {
+// 	console.error(err)
+// })
 
 //express => get steamID / rust auth token
 
@@ -105,8 +105,6 @@ const corsOptions = {
 	  	if (allowedOrigins.indexOf(origin) !== -1) {
 			callback(null, true)
 	  	} else {
-			console.log(origin)
-			console.log(allowedOrigins.indexOf(origin))
 			callback(new Error('Not allowed by CORS'))
 	  	}
 	},
@@ -115,13 +113,38 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.use(express.json())
 
+async function getExpoPushToken(fcmToken) {
+	const response = await axios.post('https://exp.host/--/api/v2/push/getExpoPushToken', {
+		  deviceId: uuidv4(),
+		  experienceId: '@facepunch/RustCompanion',
+		  appId: 'com.facepunch.rust.companion',
+		  deviceToken: fcmToken,
+		  type: 'fcm',
+		  development: false
+	  });
+	  return response.data.data.expoPushToken;
+  }
+  
+async function registerWithRustPlus(rustPlusToken, expoPushToken) {
+	return axios.post('https://companion-rust.facepunch.com:443/api/push/register', {
+		AuthToken: rustPlusToken,
+		DeviceId: 'rustplus.js',
+		PushKind: 0,
+		PushToken: expoPushToken,
+	})
+}
+
 app.post('/register', (req, res) => {
 	// res.send('Welcome')
-	console.log(req)
 	let steamID = req.body.steamID
 	let rustToken = req.body.rustToken
 	let fcmToken = req.body.fcmToken
-	console.log(`steam ID= ${steamID}\nToken= ${rustToken}\nfcmToken= ${fcmToken}`)
+	getExpoPushToken(fcmToken)
+		.then((expoToken) => {
+			return registerWithRustPlus(rustToken, expoToken)
+		}).then((rustAPIres) => {
+			res.status(rustAPIres.status).send(rustAPIres.statusText)
+		})
 	res.sendStatus(200)
 })
 
